@@ -14,7 +14,7 @@
     <h2>Turnos — {{ fecha }}</h2>
     {% if turnos %}
         {% for t in turnos %}
-        <div class="turno-card">
+        <div class="turno-card" id="turno-{{ t.id }}">
             <div class="turno-top">
                 <div class="turno-hora">{{ t.hora }}</div>
                 <div class="turno-info">
@@ -23,9 +23,19 @@
                 </div>
                 <span class="badge badge-{{ t.estado }}">{{ t.estado | capitalize }}</span>
             </div>
+
             {% if t.paciente.precio_sesion > 0 and t.paciente.modalidad == 'particular' %}
             <div class="turno-precio" style="margin-bottom:8px;">💲 ${{ fmt_pesos(t.paciente.precio_sesion) }}</div>
             {% endif %}
+
+            <!-- Cronómetro -->
+            <div class="cronometro" id="crono-{{ t.id }}"
+                 data-hora="{{ t.hora }}"
+                 data-fecha="{{ fecha }}"
+                 data-id="{{ t.id }}"
+                 style="display:none;">
+            </div>
+
             <div class="turno-btns">
                 {% if t.estado != 'confirmado' %}
                 <a href="/turnos/estado/{{ t.id }}/confirmado?redirect=turnos&fecha={{ fecha }}" class="btn btn-success btn-sm">✅ Confirmar</a>
@@ -71,4 +81,116 @@
     </form>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<style>
+.cronometro {
+    margin: 8px 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 15px;
+    text-align: center;
+}
+.crono-en-curso {
+    background: #ede9fe;
+    color: #5B21B6;
+    border: 2px solid #6B21E8;
+}
+.crono-urgente {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 2px solid #dc2626;
+    animation: pulsar 1s infinite;
+}
+.crono-finalizado {
+    background: #d1fae5;
+    color: #065f46;
+    border: 2px solid #059669;
+}
+@keyframes pulsar {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+</style>
+
+<script>
+const DURACION = 45 * 60; // 45 minutos en segundos
+
+function parsearFechaHora(fecha, hora) {
+    return new Date(fecha + 'T' + hora + ':00');
+}
+
+function formatearTiempo(segundos) {
+    const m = Math.floor(segundos / 60);
+    const s = segundos % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+// Alarma con Web Audio API
+function sonarAlarma() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        for (let i = 0; i < 3; i++) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.5, ctx.currentTime + i * 0.6);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.6 + 0.5);
+            osc.start(ctx.currentTime + i * 0.6);
+            osc.stop(ctx.currentTime + i * 0.6 + 0.5);
+        }
+    } catch(e) {}
+}
+
+const alarmasSonadas = {};
+
+function actualizarCronometros() {
+    const ahora = new Date();
+    const cronosEls = document.querySelectorAll('.cronometro');
+
+    cronosEls.forEach(el => {
+        const fecha = el.dataset.fecha;
+        const hora = el.dataset.hora;
+        const id = el.dataset.id;
+
+        const inicio = parsearFechaHora(fecha, hora);
+        const fin = new Date(inicio.getTime() + DURACION * 1000);
+        const transcurrido = Math.floor((ahora - inicio) / 1000);
+        const restante = DURACION - transcurrido;
+
+        // Solo mostrar si el turno empezó hoy
+        const hoyStr = ahora.toISOString().split('T')[0];
+        if (fecha !== hoyStr) return;
+
+        if (transcurrido < 0) {
+            // Turno futuro — no mostrar cronómetro
+            el.style.display = 'none';
+            return;
+        }
+
+        el.style.display = 'block';
+
+        if (restante > 0) {
+            const urgente = restante <= 300; // últimos 5 minutos
+            el.className = 'cronometro ' + (urgente ? 'crono-urgente' : 'crono-en-curso');
+            el.innerHTML = (urgente ? '⚠️ ' : '⏱ ') + 'Sesión en curso — ' + formatearTiempo(restante) + ' restantes';
+        } else {
+            el.className = 'cronometro crono-finalizado';
+            el.innerHTML = '✅ Sesión finalizada hace ' + Math.floor(-restante / 60) + ' min';
+            if (!alarmasSonadas[id]) {
+                alarmasSonadas[id] = true;
+                sonarAlarma();
+            }
+        }
+    });
+}
+
+actualizarCronometros();
+setInterval(actualizarCronometros, 1000);
+</script>
 {% endblock %}

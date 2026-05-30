@@ -144,6 +144,7 @@ def home():
         total_pacientes=total_pacientes,
         total_terapeutas=total_terapeutas,
         hoy=date.today().strftime("%d/%m/%Y"),
+        hoy_iso=date.today().strftime("%Y-%m-%d"),
         fmt_pesos=fmt_pesos,
         edad=edad
     )

@@ -40,6 +40,14 @@
             <div class="turno-precio" style="margin-bottom:10px;">💲 ${{ fmt_pesos(t.paciente.precio_sesion) }} por sesión</div>
             {% endif %}
 
+            <!-- Cronómetro -->
+            <div class="cronometro" id="crono-{{ t.id }}"
+                 data-hora="{{ t.hora }}"
+                 data-fecha="{{ hoy_iso }}"
+                 data-id="{{ t.id }}"
+                 style="display:none;">
+            </div>
+
             <div class="turno-btns">
                 {% if t.estado != 'confirmado' %}
                 <a href="/turnos/estado/{{ t.id }}/confirmado" class="btn btn-success btn-sm">✅ Confirmar</a>
@@ -82,4 +90,42 @@
     <a href="/turnos" class="btn btn-primary" style="margin-top:12px;width:100%;justify-content:center;">Ver agenda completa</a>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<style>
+.cronometro { margin: 8px 0; padding: 10px 14px; border-radius: 12px; font-weight: bold; font-size: 15px; text-align: center; }
+.crono-en-curso { background: #ede9fe; color: #5B21B6; border: 2px solid #6B21E8; }
+.crono-urgente { background: #fee2e2; color: #991b1b; border: 2px solid #dc2626; animation: pulsar 1s infinite; }
+.crono-finalizado { background: #d1fae5; color: #065f46; border: 2px solid #059669; }
+@keyframes pulsar { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+</style>
+<script>
+const DURACION = 45 * 60;
+function formatearTiempo(s) { const m = Math.floor(s/60); const ss = s%60; return String(m).padStart(2,'0')+':'+String(ss).padStart(2,'0'); }
+function sonarAlarma() { try { const ctx = new (window.AudioContext||window.webkitAudioContext)(); for(let i=0;i<3;i++){const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.value=880;g.gain.setValueAtTime(0.5,ctx.currentTime+i*0.6);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.6+0.5);o.start(ctx.currentTime+i*0.6);o.stop(ctx.currentTime+i*0.6+0.5);} } catch(e){} }
+const alarmasSonadas = {};
+function actualizarCronometros() {
+    const ahora = new Date();
+    document.querySelectorAll('.cronometro').forEach(el => {
+        const inicio = new Date(el.dataset.fecha + 'T' + el.dataset.hora + ':00');
+        const transcurrido = Math.floor((ahora - inicio) / 1000);
+        const restante = DURACION - transcurrido;
+        const id = el.dataset.id;
+        if (transcurrido < 0) { el.style.display='none'; return; }
+        el.style.display = 'block';
+        if (restante > 0) {
+            const urgente = restante <= 300;
+            el.className = 'cronometro ' + (urgente ? 'crono-urgente' : 'crono-en-curso');
+            el.innerHTML = (urgente ? '⚠️ ' : '⏱ ') + 'Sesión en curso — ' + formatearTiempo(restante) + ' restantes';
+        } else {
+            el.className = 'cronometro crono-finalizado';
+            el.innerHTML = '✅ Sesión finalizada hace ' + Math.floor(-restante/60) + ' min';
+            if (!alarmasSonadas[id]) { alarmasSonadas[id]=true; sonarAlarma(); }
+        }
+    });
+}
+actualizarCronometros();
+setInterval(actualizarCronometros, 1000);
+</script>
 {% endblock %}
