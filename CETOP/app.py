@@ -166,6 +166,25 @@ def turnos():
     return render_template("turnos.html", turnos=lista, fecha=fecha, terapeutas=terapeutas, pacientes=pacientes, fmt_pesos=fmt_pesos)
 
 
+@app.route("/turnos/cobrar/<int:id>")
+@login_required
+def cobrar_turno(id):
+    t = Turno.query.get(id)
+    if t and t.paciente.precio_sesion > 0:
+        modalidad = "Obra social" if t.paciente.modalidad == "obra_social" else "Particular"
+        m = Movimiento(
+            tipo="ingreso",
+            descripcion=f"Sesión — {t.paciente.nombre}",
+            monto=t.paciente.precio_sesion,
+            fecha=t.fecha,
+            categoria=f"Sesión cobrada · {modalidad}"
+        )
+        db.session.add(m)
+        t.estado = "cobrado"
+        db.session.commit()
+    return redirect(url_for("turnos", fecha=t.fecha))
+
+
 @app.route("/turnos/agregar", methods=["POST"])
 @login_required
 def agregar_turno():

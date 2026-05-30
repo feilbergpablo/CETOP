@@ -181,7 +181,8 @@ function actualizarCronometros() {
             el.innerHTML = (urgente ? '⚠️ ' : '⏱ ') + 'Sesión en curso — ' + formatearTiempo(restante) + ' restantes';
         } else {
             el.className = 'cronometro crono-finalizado';
-            el.innerHTML = '✅ Sesión finalizada hace ' + Math.floor(-restante / 60) + ' min';
+            el.innerHTML = '✅ Sesión finalizada hace ' + Math.floor(-restante / 60) + ' min'
+                + ' &nbsp;<a href="/turnos/cobrar/' + id + '" class="btn btn-success btn-sm" style="font-size:13px;">💲 Cobrar sesión</a>';
             if (!alarmasSonadas[id]) {
                 alarmasSonadas[id] = true;
                 sonarAlarma();
