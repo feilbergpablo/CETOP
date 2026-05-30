@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}- Inicio{% endblock %}
+{% block content %}
+
+<div class="stats-grid">
+    <div class="stat">
+        <div class="stat-num">{{ total_pacientes }}</div>
+        <div class="stat-label">Pacientes activos</div>
+    </div>
+    <div class="stat">
+        <div class="stat-num" style="color:#2ABFBF;">{{ turnos_hoy|length }}</div>
+        <div class="stat-label">Turnos hoy</div>
+    </div>
+    {% if total_terapeutas %}
+    <div class="stat">
+        <div class="stat-num" style="color:#065f46;">{{ total_terapeutas }}</div>
+        <div class="stat-label">Terapeutas</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>📅 Turnos de hoy — {{ hoy }}</h2>
+
+    {% if turnos_hoy %}
+        {% for t in turnos_hoy %}
+        <div class="turno-card">
+            <div class="turno-top">
+                <div class="turno-hora">{{ t.hora }}</div>
+                <div class="turno-info">
+                    <div class="turno-nombre">{{ t.paciente.nombre }}</div>
+                    <div class="turno-prof">{{ t.terapeuta.nombre }} · {{ t.terapeuta.especialidad }}</div>
+                </div>
+                <span class="badge {{ 'badge-os' if t.paciente.modalidad == 'obra_social' else 'badge-part' }}">
+                    {{ 'Obra social' if t.paciente.modalidad == 'obra_social' else 'Particular' }}
+                </span>
+            </div>
+
+            {% if t.paciente.modalidad == 'particular' and t.paciente.precio_sesion > 0 %}
+            <div class="turno-precio" style="margin-bottom:10px;">💲 ${{ fmt_pesos(t.paciente.precio_sesion) }} por sesión</div>
+            {% endif %}
+
+            <div class="turno-btns">
+                {% if t.estado != 'confirmado' %}
+                <a href="/turnos/estado/{{ t.id }}/confirmado" class="btn btn-success btn-sm">✅ Confirmar</a>
+                {% else %}
+                <span class="btn btn-success btn-sm" style="opacity:0.7;cursor:default;">✅ Confirmado</span>
+                {% endif %}
+
+                {% if t.estado != 'cancelado' %}
+                <a href="/turnos/estado/{{ t.id }}/cancelado" class="btn btn-danger btn-sm">❌ Cancelar</a>
+                {% else %}
+                <span class="btn btn-danger btn-sm" style="opacity:0.7;cursor:default;">❌ Cancelado</span>
+                <a href="/turnos/estado/{{ t.id }}/pendiente" class="btn btn-secondary btn-sm">↩ Reactivar</a>
+                {% endif %}
+
+                {% if t.paciente.contacto_telefono %}
+                {% set tel = t.paciente.contacto_telefono | replace(' ', '') | replace('-', '') %}
+                {% if t.estado == 'confirmado' %}
+                {% set msg = 'Hola ' + t.paciente.contacto_nombre + '! Te confirmamos el turno de ' + t.paciente.nombre + ' para hoy a las ' + t.hora + ' hs en CETOP. Cualquier consulta estamos a disposición.' %}
+                {% elif t.estado == 'cancelado' %}
+                {% set msg = 'Hola ' + t.paciente.contacto_nombre + '. Te informamos que el turno de ' + t.paciente.nombre + ' de hoy a las ' + t.hora + ' hs fue cancelado. Nos comunicaremos para reprogramarlo. Disculpá los inconvenientes.' %}
+                {% else %}
+                {% set msg = 'Hola ' + t.paciente.contacto_nombre + '! Te recordamos el turno de ' + t.paciente.nombre + ' para hoy a las ' + t.hora + ' hs en CETOP.' %}
+                {% endif %}
+                {% if t.paciente.precio_sesion > 0 and t.paciente.modalidad == 'particular' %}
+                {% set msg = msg + ' El valor de la sesión es $' + fmt_pesos(t.paciente.precio_sesion) + '.' %}
+                {% endif %}
+                <a href="https://wa.me/54{{ tel }}?text={{ msg | urlencode }}" target="_blank" class="btn btn-wsp btn-sm">📱 WhatsApp</a>
+                {% endif %}
+            </div>
+
+            <span class="badge badge-{{ t.estado }}" style="margin-top:8px;display:inline-block;">
+                {{ t.estado | capitalize }}
+            </span>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:#9ca3af;text-align:center;padding:20px;">No hay turnos cargados para hoy.</p>
+    {% endif %}
+
+    <a href="/turnos" class="btn btn-primary" style="margin-top:12px;width:100%;justify-content:center;">Ver agenda completa</a>
+</div>
+
+{% endblock %}

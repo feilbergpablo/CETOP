@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}- Editar terapeuta{% endblock %}
+{% block content %}
+
+<div class="card">
+    <h2>✏️ Editar — {{ terapeuta.nombre }}</h2>
+    <form method="POST">
+        <input type="text" name="nombre" value="{{ terapeuta.nombre }}" required>
+        <select name="especialidad">
+            {% for e in ['Terapia Ocupacional','Psicología','Fonoaudiología','Psicopedagogía','Kinesiología','Otra'] %}
+            <option {{ 'selected' if e == terapeuta.especialidad }}>{{ e }}</option>
+            {% endfor %}
+        </select>
+        <input type="text" name="telefono" value="{{ terapeuta.telefono }}" placeholder="Teléfono (opcional)">
+        <input type="password" name="password" placeholder="Nueva contraseña (dejar vacío para no cambiar)">
+        <button type="submit" class="btn btn-primary" style="width:100%;">Guardar cambios</button>
+    </form>
+    <a href="/terapeutas" class="btn btn-secondary" style="width:100%;margin-top:10px;justify-content:center;">← Volver</a>
+</div>
+
+{% endblock %}

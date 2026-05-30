@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CETOP - Acceso</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#6B21E8">
+    <style>
+        * { box-sizing: border-box; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        body { min-height: 100vh; background: linear-gradient(135deg, #1a0533, #0f172a); display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .card { width: 100%; max-width: 400px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 36px; backdrop-filter: blur(10px); text-align: center; }
+        .logo { font-size: 52px; margin-bottom: 10px; }
+        h1 { color: #2ABFBF; font-size: 36px; margin-bottom: 4px; letter-spacing: 2px; }
+        .sub { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 28px; }
+        .error { background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; padding: 12px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+        input { width: 100%; padding: 14px; margin-bottom: 14px; border: none; border-radius: 12px; background: rgba(255,255,255,0.1); color: white; font-size: 16px; }
+        input::placeholder { color: rgba(255,255,255,0.4); }
+        button { width: 100%; padding: 15px; border: none; border-radius: 12px; background: #6B21E8; color: white; font-size: 17px; font-weight: bold; cursor: pointer; }
+        .hint { color: rgba(255,255,255,0.35); font-size: 12px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">👾</div>
+        <h1>CETOP</h1>
+        <p class="sub">Sistema de gestión clínica</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for cat, msg in messages %}
+                <div class="error">{{ msg }}</div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST">
+            <input type="text" name="usuario" placeholder="Usuario" required>
+            <input type="password" name="password" placeholder="Contraseña" required>
+            <button type="submit">Ingresar</button>
+        </form>
+        <p class="hint">Centro de Terapia Ocupacional Pediátrica</p>
+    </div>
+</body>
+</html>

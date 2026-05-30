@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}- Consultorio{% endblock %}
+{% block content %}
+
+<div class="card">
+    <h2>🏥 Consultorio</h2>
+    <form method="GET" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input type="month" name="mes" value="{{ mes_seleccionado }}" style="width:auto;margin:0;">
+        <button type="submit" class="btn btn-primary btn-sm">Ver</button>
+    </form>
+</div>
+
+<div class="stats-grid">
+    <div class="stat">
+        <div class="stat-num ingreso">${{ fmt_pesos(ingresos) }}</div>
+        <div class="stat-label">Ingresos</div>
+    </div>
+    <div class="stat">
+        <div class="stat-num gasto">${{ fmt_pesos(gastos) }}</div>
+        <div class="stat-label">Gastos</div>
+    </div>
+    <div class="stat">
+        <div class="stat-num" style="color:{{ '#065f46' if saldo >= 0 else '#991b1b' }};">${{ fmt_pesos(saldo) }}</div>
+        <div class="stat-label">Saldo</div>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat">
+        <div class="stat-num" style="color:#1e40af;font-size:20px;">${{ fmt_pesos(ing_os) }}</div>
+        <div class="stat-label">Obra social</div>
+    </div>
+    <div class="stat">
+        <div class="stat-num" style="color:#92400e;font-size:20px;">${{ fmt_pesos(ing_part) }}</div>
+        <div class="stat-label">Particulares</div>
+    </div>
+    <div class="stat">
+        <div class="stat-num" style="color:#2ABFBF;font-size:20px;">{{ sesiones_mes }}</div>
+        <div class="stat-label">Sesiones del mes</div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>📋 Movimientos</h2>
+    {% if movimientos %}
+        {% for m in movimientos %}
+        <div class="mov-row">
+            <div style="font-size:22px;">{{ '💰' if m.tipo == 'ingreso' else '🧾' }}</div>
+            <div style="flex:1;">
+                <div style="font-size:14px;font-weight:bold;color:#1a1a2e;">{{ m.descripcion }}</div>
+                <div style="font-size:12px;color:#9ca3af;">{{ m.categoria }} · {{ m.fecha }}</div>
+            </div>
+            <div class="mov-monto {{ 'ingreso' if m.tipo == 'ingreso' else 'gasto' }}">
+                {{ '+' if m.tipo == 'ingreso' else '-' }}${{ fmt_pesos(m.monto) }}
+            </div>
+            <a href="/consultorio/eliminar/{{ m.id }}" onclick="return confirm('¿Eliminar?')" class="btn btn-secondary btn-sm">🗑</a>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:#9ca3af;text-align:center;padding:16px;">Sin movimientos este mes.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>➕ Agregar movimiento</h2>
+    <form method="POST" action="/consultorio/agregar">
+        <select name="tipo" required>
+            <option value="ingreso">Ingreso</option>
+            <option value="gasto">Gasto</option>
+        </select>
+        <input type="text" name="descripcion" placeholder="Descripción" required>
+        <select name="categoria">
+            <option>Sesión cobrada</option>
+            <option>Obra social</option>
+            <option>Alquiler</option>
+            <option>Servicios</option>
+            <option>Insumos</option>
+            <option>Sueldo</option>
+            <option>Otros</option>
+        </select>
+        <input type="number" name="monto" placeholder="Monto ($)" step="100" min="0" required>
+        <input type="date" name="fecha" id="fecha-mov">
+        <button type="submit" class="btn btn-primary" style="width:100%;">Guardar</button>
+    </form>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('fecha-mov').value = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}

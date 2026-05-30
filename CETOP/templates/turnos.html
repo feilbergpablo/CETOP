@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}- Agenda{% endblock %}
+{% block content %}
+
+<div class="card">
+    <h2>📅 Agenda</h2>
+    <form method="GET" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input type="date" name="fecha" value="{{ fecha }}" style="width:auto;margin:0;">
+        <button type="submit" class="btn btn-primary btn-sm">Ver</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Turnos — {{ fecha }}</h2>
+    {% if turnos %}
+        {% for t in turnos %}
+        <div class="turno-card">
+            <div class="turno-top">
+                <div class="turno-hora">{{ t.hora }}</div>
+                <div class="turno-info">
+                    <div class="turno-nombre">{{ t.paciente.nombre }}</div>
+                    <div class="turno-prof">{{ t.terapeuta.nombre }}</div>
+                </div>
+                <span class="badge badge-{{ t.estado }}">{{ t.estado | capitalize }}</span>
+            </div>
+            {% if t.paciente.precio_sesion > 0 and t.paciente.modalidad == 'particular' %}
+            <div class="turno-precio" style="margin-bottom:8px;">💲 ${{ fmt_pesos(t.paciente.precio_sesion) }}</div>
+            {% endif %}
+            <div class="turno-btns">
+                {% if t.estado != 'confirmado' %}
+                <a href="/turnos/estado/{{ t.id }}/confirmado?redirect=turnos&fecha={{ fecha }}" class="btn btn-success btn-sm">✅ Confirmar</a>
+                {% endif %}
+                {% if t.estado != 'cancelado' %}
+                <a href="/turnos/estado/{{ t.id }}/cancelado?redirect=turnos&fecha={{ fecha }}" class="btn btn-danger btn-sm">❌ Cancelar</a>
+                {% else %}
+                <a href="/turnos/estado/{{ t.id }}/pendiente?redirect=turnos&fecha={{ fecha }}" class="btn btn-secondary btn-sm">↩ Reactivar</a>
+                {% endif %}
+                {% if t.paciente.contacto_telefono %}
+                {% set tel = t.paciente.contacto_telefono | replace(' ', '') | replace('-', '') %}
+                {% set msg = 'Hola ' + t.paciente.contacto_nombre + '! Te recordamos el turno de ' + t.paciente.nombre + ' para el ' + fecha + ' a las ' + t.hora + ' hs en CETOP.' %}
+                <a href="https://wa.me/54{{ tel }}?text={{ msg | urlencode }}" target="_blank" class="btn btn-wsp btn-sm">📱 WhatsApp</a>
+                {% endif %}
+                <a href="/turnos/eliminar/{{ t.id }}" class="btn btn-secondary btn-sm" onclick="return confirm('¿Eliminar este turno?')">🗑</a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:#9ca3af;text-align:center;padding:20px;">No hay turnos para este día.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>➕ Nuevo turno</h2>
+    <form method="POST" action="/turnos/agregar">
+        <select name="paciente_id" required>
+            <option value="">Seleccionar paciente</option>
+            {% for p in pacientes %}
+            <option value="{{ p.id }}">{{ p.nombre }}</option>
+            {% endfor %}
+        </select>
+        <select name="terapeuta_id" required>
+            <option value="">Seleccionar terapeuta</option>
+            {% for t in terapeutas %}
+            <option value="{{ t.id }}" {{ 'selected' if t.id == current_user.id }}>{{ t.nombre }}</option>
+            {% endfor %}
+        </select>
+        <input type="date" name="fecha" value="{{ fecha }}" required>
+        <input type="time" name="hora" required>
+        <textarea name="notas" placeholder="Notas (opcional)"></textarea>
+        <button type="submit" class="btn btn-primary" style="width:100%;">Guardar turno</button>
+    </form>
+</div>
+
+{% endblock %}

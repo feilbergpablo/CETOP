@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}- Terapeutas{% endblock %}
+{% block content %}
+
+<div class="card">
+    <h2>👥 Equipo terapéutico</h2>
+    {% for t in terapeutas %}
+    <div class="pac-row">
+        <div class="avatar" style="background:#d1fae5;color:#065f46;">{{ t.nombre[:2].upper() }}</div>
+        <div class="pac-info">
+            <div class="pac-nombre">{{ t.nombre }} {% if t.es_admin %}<span class="badge" style="background:#ede9fe;color:#5B21B6;">Admin</span>{% endif %}</div>
+            <div class="pac-det">{{ t.especialidad }} · @{{ t.usuario }}</div>
+        </div>
+        <a href="/terapeutas/editar/{{ t.id }}" class="btn btn-secondary btn-sm">✏️ Editar</a>
+        {% if not t.es_admin %}
+        <a href="/terapeutas/eliminar/{{ t.id }}" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar terapeuta?')">🗑</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <h2>➕ Agregar terapeuta</h2>
+    <form method="POST" action="/terapeutas/agregar">
+        <input type="text" name="nombre" placeholder="Nombre completo (ej: Lic. María García)" required>
+        <select name="especialidad">
+            <option>Terapia Ocupacional</option>
+            <option>Psicología</option>
+            <option>Fonoaudiología</option>
+            <option>Psicopedagogía</option>
+            <option>Kinesiología</option>
+            <option>Otra</option>
+        </select>
+        <input type="text" name="usuario" placeholder="Usuario para login" required>
+        <input type="password" name="password" placeholder="Contraseña" required>
+        <input type="text" name="telefono" placeholder="Teléfono (opcional)">
+        <button type="submit" class="btn btn-primary" style="width:100%;">Agregar terapeuta</button>
+    </form>
+</div>
+
+{% endblock %}

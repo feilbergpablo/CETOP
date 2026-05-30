@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}- Pacientes{% endblock %}
+{% block content %}
+
+<div class="card">
+    <h2>👶 Pacientes activos ({{ pacientes|length }})</h2>
+    {% if pacientes %}
+        {% for p in pacientes %}
+        <div class="pac-row">
+            <div class="avatar">{{ p.nombre[:2].upper() }}</div>
+            <div class="pac-info">
+                <div class="pac-nombre">{{ p.nombre }}</div>
+                <div class="pac-det">{{ edad(p.fecha_nacimiento) }} años · {{ p.diagnostico or 'Sin diagnóstico' }} · {{ p.terapeuta.nombre }}</div>
+            </div>
+            <span class="badge {{ 'badge-os' if p.modalidad == 'obra_social' else 'badge-part' }}">
+                {{ 'OS' if p.modalidad == 'obra_social' else 'Part.' }}
+            </span>
+            <a href="/pacientes/{{ p.id }}" class="btn btn-primary btn-sm">Ver</a>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:#9ca3af;text-align:center;padding:20px;">No hay pacientes cargados.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>➕ Nuevo paciente</h2>
+    <form method="POST" action="/pacientes/agregar">
+        <input type="text" name="nombre" placeholder="Nombre completo del paciente" required>
+        <label style="font-size:13px;color:#666;margin-bottom:4px;display:block;">Fecha de nacimiento</label>
+        <input type="date" name="fecha_nacimiento" required>
+        <input type="text" name="diagnostico" placeholder="Diagnóstico">
+        <select name="modalidad" id="modalidad" onchange="toggleOS()">
+            <option value="particular">Particular</option>
+            <option value="obra_social">Obra social</option>
+        </select>
+        <input type="text" name="obra_social" id="campo-os" placeholder="Nombre de la obra social" style="display:none;">
+        <input type="number" name="precio_sesion" placeholder="Precio por sesión ($)" step="100" min="0">
+        <input type="text" name="contacto_nombre" placeholder="Nombre del padre/madre/tutor">
+        <input type="text" name="contacto_telefono" placeholder="Teléfono de contacto (ej: 1155551234)">
+        {% if current_user.es_admin %}
+        <select name="terapeuta_id">
+            {% for t in terapeutas %}
+            <option value="{{ t.id }}">{{ t.nombre }} — {{ t.especialidad }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        <button type="submit" class="btn btn-primary" style="width:100%;">Guardar paciente</button>
+    </form>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleOS() {
+    const m = document.getElementById('modalidad').value;
+    document.getElementById('campo-os').style.display = m === 'obra_social' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

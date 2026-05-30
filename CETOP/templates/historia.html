@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}- {{ paciente.nombre }}{% endblock %}
+{% block content %}
+
+<div class="card">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+        <div class="avatar" style="width:54px;height:54px;font-size:18px;">{{ paciente.nombre[:2].upper() }}</div>
+        <div style="flex:1;">
+            <div style="font-size:19px;font-weight:bold;color:#1a1a2e;">{{ paciente.nombre }}</div>
+            <div style="font-size:13px;color:#666;">{{ edad(paciente.fecha_nacimiento) }} años · {{ paciente.terapeuta.nombre }}</div>
+            <span class="badge {{ 'badge-os' if paciente.modalidad == 'obra_social' else 'badge-part' }}" style="margin-top:4px;display:inline-block;">
+                {{ paciente.obra_social if paciente.modalidad == 'obra_social' else 'Particular' }}
+            </span>
+        </div>
+        <a href="/pacientes/editar/{{ paciente.id }}" class="btn btn-secondary btn-sm">✏️ Editar</a>
+    </div>
+
+    <div class="data-grid">
+        <div class="data-item">
+            <div class="label">Fecha de nac.</div>
+            <div class="val">{{ paciente.fecha_nacimiento }}</div>
+        </div>
+        <div class="data-item">
+            <div class="label">Diagnóstico</div>
+            <div class="val">{{ paciente.diagnostico or '—' }}</div>
+        </div>
+        <div class="data-item">
+            <div class="label">Contacto</div>
+            <div class="val">{{ paciente.contacto_nombre or '—' }}</div>
+        </div>
+        <div class="data-item">
+            <div class="label">Teléfono</div>
+            <div class="val">
+                {% if paciente.contacto_telefono %}
+                <a href="https://wa.me/54{{ paciente.contacto_telefono | replace(' ','') | replace('-','') }}" target="_blank" style="color:#25D366;">📱 {{ paciente.contacto_telefono }}</a>
+                {% else %}—{% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div style="background:#f8f6ff;border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:14px;color:#666;flex:1;">💲 Precio por sesión</span>
+        <span style="font-size:18px;font-weight:bold;color:#6B21E8;">${{ fmt_pesos(paciente.precio_sesion) }}</span>
+        {% if paciente.contacto_telefono and paciente.precio_sesion > 0 %}
+        {% set tel = paciente.contacto_telefono | replace(' ','') | replace('-','') %}
+        {% set msg = 'Hola ' + paciente.contacto_nombre + '! Te informamos que el precio de la sesión de ' + paciente.nombre + ' es de $' + fmt_pesos(paciente.precio_sesion) + '. Cualquier consulta, estamos a disposición. CETOP.' %}
+        <a href="https://wa.me/54{{ tel }}?text={{ msg | urlencode }}" target="_blank" class="btn btn-wsp btn-sm">📱 Notificar</a>
+        {% endif %}
+    </div>
+</div>
+
+{% if sesiones %}
+<div class="card">
+    <h2>📈 Evolución</h2>
+    <div class="evo-chart">
+        {% set ultimas = sesiones[:6] | reverse | list %}
+        {% for s in ultimas %}
+        <div class="evo-col">
+            <div class="evo-bar" style="height:{{ (s.puntuacion / 10 * 60) | int }}px;"></div>
+            <div class="evo-lbl">{{ s.fecha[5:] }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>📋 Historial de sesiones</h2>
+    {% if sesiones %}
+        {% for s in sesiones %}
+        <div class="sesion-item">
+            <div class="sesion-fecha">{{ s.fecha }}</div>
+            <div class="sesion-body">
+                <div class="sesion-nota">{{ s.nota or 'Sin notas.' }}</div>
+                <div class="sesion-score">
+                    <span style="font-size:12px;color:#666;">Puntuación:</span>
+                    <div class="score-dots">
+                        {% for i in range(1, 11) %}
+                        <div class="dot {{ 'filled' if i <= s.puntuacion }}"></div>
+                        {% endfor %}
+                    </div>
+                    <span style="font-size:13px;font-weight:bold;color:#6B21E8;">{{ s.puntuacion }}/10</span>
+                </div>
+            </div>
+            <a href="/sesiones/eliminar/{{ s.id }}" class="btn btn-secondary btn-sm" onclick="return confirm('¿Eliminar sesión?')" style="align-self:flex-start;">🗑</a>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p style="color:#9ca3af;text-align:center;padding:16px;">Sin sesiones registradas.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>➕ Registrar sesión</h2>
+    <form method="POST" action="/sesiones/agregar">
+        <input type="hidden" name="paciente_id" value="{{ paciente.id }}">
+        <label style="font-size:13px;color:#666;margin-bottom:4px;display:block;">Fecha de la sesión</label>
+        <input type="date" name="fecha" value="{{ now }}" required>
+        <textarea name="nota" placeholder="Notas de la sesión..."></textarea>
+        <label style="font-size:14px;color:#666;margin-bottom:8px;display:block;">Puntuación evolutiva: <strong id="pval">5</strong>/10</label>
+        <input type="range" name="puntuacion" min="1" max="10" value="5" oninput="document.getElementById('pval').textContent=this.value" style="margin-bottom:14px;">
+        <button type="submit" class="btn btn-primary" style="width:100%;">Guardar sesión</button>
+    </form>
+</div>
+
+<div style="text-align:center;margin-top:10px;">
+    <a href="/pacientes/daralta/{{ paciente.id }}" class="btn btn-secondary" onclick="return confirm('¿Dar de alta a este paciente?')">Dar de alta</a>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const hoy = new Date().toISOString().split('T')[0];
+document.querySelector('input[name="fecha"]').value = hoy;
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}- Editar paciente{% endblock %}
+{% block content %}
+
+<div class="card">
+    <h2>✏️ Editar — {{ paciente.nombre }}</h2>
+    <form method="POST">
+        <input type="text" name="nombre" value="{{ paciente.nombre }}" required>
+        <label style="font-size:13px;color:#666;margin-bottom:4px;display:block;">Fecha de nacimiento</label>
+        <input type="date" name="fecha_nacimiento" value="{{ paciente.fecha_nacimiento }}" required>
+        <input type="text" name="diagnostico" value="{{ paciente.diagnostico }}" placeholder="Diagnóstico">
+        <select name="modalidad" id="modalidad" onchange="toggleOS()">
+            <option value="particular" {{ 'selected' if paciente.modalidad == 'particular' }}>Particular</option>
+            <option value="obra_social" {{ 'selected' if paciente.modalidad == 'obra_social' }}>Obra social</option>
+        </select>
+        <input type="text" name="obra_social" id="campo-os" value="{{ paciente.obra_social }}" placeholder="Nombre de la obra social" style="{{ 'display:none' if paciente.modalidad == 'particular' }}">
+        <input type="number" name="precio_sesion" value="{{ paciente.precio_sesion | int }}" placeholder="Precio por sesión ($)" step="100" min="0">
+        <input type="text" name="contacto_nombre" value="{{ paciente.contacto_nombre }}" placeholder="Nombre del padre/madre/tutor">
+        <input type="text" name="contacto_telefono" value="{{ paciente.contacto_telefono }}" placeholder="Teléfono de contacto">
+        {% if current_user.es_admin %}
+        <select name="terapeuta_id">
+            {% for t in terapeutas %}
+            <option value="{{ t.id }}" {{ 'selected' if t.id == paciente.terapeuta_id }}>{{ t.nombre }} — {{ t.especialidad }}</option>
+            {% endfor %}
+        </select>
+        {% endif %}
+        <button type="submit" class="btn btn-primary" style="width:100%;">Guardar cambios</button>
+    </form>
+    <a href="/pacientes/{{ paciente.id }}" class="btn btn-secondary" style="width:100%;margin-top:10px;justify-content:center;">← Volver</a>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function toggleOS() {
+    const m = document.getElementById('modalidad').value;
+    document.getElementById('campo-os').style.display = m === 'obra_social' ? 'block' : 'none';
+}
+</script>
+{% endblock %}
