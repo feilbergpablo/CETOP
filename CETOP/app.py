@@ -132,11 +132,11 @@ def home():
     hoy = date.today().strftime("%Y-%m-%d")
 
     if current_user.es_admin:
-        turnos_hoy = Turno.query.filter_by(fecha=hoy).order_by(Turno.hora).all()
+        turnos_hoy = Turno.query.filter(Turno.fecha==hoy, Turno.estado!="cobrado").order_by(Turno.hora).all()
         total_pacientes = Paciente.query.filter_by(activo=True).count()
         total_terapeutas = Terapeuta.query.count()
     else:
-        turnos_hoy = Turno.query.filter_by(fecha=hoy, terapeuta_id=current_user.id).order_by(Turno.hora).all()
+        turnos_hoy = Turno.query.filter(Turno.fecha==hoy, Turno.terapeuta_id==current_user.id, Turno.estado!="cobrado").order_by(Turno.hora).all()
         total_pacientes = Paciente.query.filter_by(activo=True, terapeuta_id=current_user.id).count()
         total_terapeutas = None
 
