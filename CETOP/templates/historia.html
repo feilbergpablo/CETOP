@@ -81,6 +81,11 @@
                     </div>
                     <span style="font-size:13px;font-weight:bold;color:#6B21E8;">{{ s.puntuacion }}/10</span>
                 </div>
+                {% if s.cobrado %}
+                <span style="font-size:12px;background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-weight:bold;display:inline-block;margin-top:6px;">✅ Cobrado — ${{ fmt_pesos(s.paciente.precio_sesion) }}</span>
+                {% else %}
+                <a href="/sesiones/cobrar/{{ s.id }}" style="font-size:12px;background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-weight:bold;display:inline-block;margin-top:6px;text-decoration:none;">💲 Marcar como cobrado</a>
+                {% endif %}
             </div>
             <a href="/sesiones/eliminar/{{ s.id }}" class="btn btn-secondary btn-sm" onclick="return confirm('¿Eliminar sesión?')" style="align-self:flex-start;">🗑</a>
         </div>

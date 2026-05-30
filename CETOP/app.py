@@ -68,6 +68,7 @@ class Sesion(db.Model):
     fecha = db.Column(db.String(20), nullable=False)
     nota = db.Column(db.Text, default="")
     puntuacion = db.Column(db.Integer, default=5)
+    cobrado = db.Column(db.Boolean, default=False)
     paciente = db.relationship("Paciente", backref="sesiones")
 
 
@@ -291,7 +292,28 @@ def agregar_sesion():
     return redirect(f"/pacientes/{paciente_id}")
 
 
-@app.route("/sesiones/eliminar/<int:id>")
+@app.route("/sesiones/cobrar/<int:id>")
+@login_required
+def cobrar_sesion(id):
+    s = Sesion.query.get(id)
+    if s and not s.cobrado:
+        s.cobrado = True
+        db.session.commit()
+        # Crear movimiento de ingreso automático en consultorio
+        if s.paciente.precio_sesion > 0:
+            modalidad = "Obra social" if s.paciente.modalidad == "obra_social" else "Particular"
+            m = Movimiento(
+                tipo="ingreso",
+                descripcion=f"Sesión — {s.paciente.nombre}",
+                monto=s.paciente.precio_sesion,
+                fecha=s.fecha,
+                categoria=f"Sesión cobrada · {modalidad}"
+            )
+            db.session.add(m)
+            db.session.commit()
+    return redirect(f"/pacientes/{s.paciente_id}")
+
+
 @login_required
 def eliminar_sesion(id):
     s = Sesion.query.get(id)
