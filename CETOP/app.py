@@ -73,6 +73,7 @@ class Sesion(db.Model):
 
 
 class Movimiento(db.Model):
+    __tablename__ = "movimiento_cetop"
     id = db.Column(db.Integer, primary_key=True)
     tipo = db.Column(db.String(20), nullable=False)  # ingreso / gasto
     descripcion = db.Column(db.String(200), nullable=False)
