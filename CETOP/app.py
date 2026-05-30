@@ -158,28 +158,31 @@ def home():
 def turnos():
     fecha = request.args.get("fecha", date.today().strftime("%Y-%m-%d"))
     if current_user.es_admin:
-        lista = Turno.query.filter_by(fecha=fecha).order_by(Turno.hora).all()
+        lista = Turno.query.filter(Turno.fecha==fecha, Turno.estado!="cobrado").order_by(Turno.hora).all()
+        cobrados = Turno.query.filter_by(fecha=fecha, estado="cobrado").order_by(Turno.hora).all()
     else:
-        lista = Turno.query.filter_by(fecha=fecha, terapeuta_id=current_user.id).order_by(Turno.hora).all()
+        lista = Turno.query.filter(Turno.fecha==fecha, Turno.terapeuta_id==current_user.id, Turno.estado!="cobrado").order_by(Turno.hora).all()
+        cobrados = Turno.query.filter_by(fecha=fecha, terapeuta_id=current_user.id, estado="cobrado").order_by(Turno.hora).all()
     terapeutas = Terapeuta.query.all()
     pacientes = Paciente.query.filter_by(activo=True).all()
-    return render_template("turnos.html", turnos=lista, fecha=fecha, terapeutas=terapeutas, pacientes=pacientes, fmt_pesos=fmt_pesos)
+    return render_template("turnos.html", turnos=lista, cobrados=cobrados, fecha=fecha, terapeutas=terapeutas, pacientes=pacientes, fmt_pesos=fmt_pesos)
 
 
 @app.route("/turnos/cobrar/<int:id>")
 @login_required
 def cobrar_turno(id):
     t = Turno.query.get(id)
-    if t and t.paciente.precio_sesion > 0:
-        modalidad = "Obra social" if t.paciente.modalidad == "obra_social" else "Particular"
-        m = Movimiento(
-            tipo="ingreso",
-            descripcion=f"Sesión — {t.paciente.nombre}",
-            monto=t.paciente.precio_sesion,
-            fecha=t.fecha,
-            categoria=f"Sesión cobrada · {modalidad}"
-        )
-        db.session.add(m)
+    if t and t.estado != "cobrado":  # solo si no fue cobrado ya
+        if t.paciente.precio_sesion > 0:
+            modalidad = "Obra social" if t.paciente.modalidad == "obra_social" else "Particular"
+            m = Movimiento(
+                tipo="ingreso",
+                descripcion=f"Sesión — {t.paciente.nombre}",
+                monto=t.paciente.precio_sesion,
+                fecha=t.fecha,
+                categoria=f"Sesión cobrada · {modalidad}"
+            )
+            db.session.add(m)
         t.estado = "cobrado"
         db.session.commit()
     return redirect(url_for("turnos", fecha=t.fecha))
