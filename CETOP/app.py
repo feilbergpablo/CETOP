@@ -544,6 +544,13 @@ with app.app_context():
             conn.commit()
     except:
         pass
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("ALTER TABLE movimiento_cetop ADD COLUMN IF NOT EXISTS terapeuta_id INTEGER"))
+            conn.execute(db.text("ALTER TABLE movimiento_cetop ADD COLUMN IF NOT EXISTS turno_id INTEGER"))
+            conn.commit()
+    except:
+        pass
     # Crear admin por defecto si no existe
     if not Terapeuta.query.filter_by(es_admin=True).first():
         admin = Terapeuta(
