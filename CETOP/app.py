@@ -359,10 +359,10 @@ def consultorio():
     gastos = sum(m.monto for m in movs if m.tipo == "gasto")
     saldo = ingresos - gastos
 
-    # Desglose OS vs particular
-    sesiones_mes = Sesion.query.filter(Sesion.fecha.like(f"{mes_str}%")).all()
-    ing_os = sum(s.paciente.precio_sesion for s in sesiones_mes if s.paciente.modalidad == "obra_social")
-    ing_part = sum(s.paciente.precio_sesion for s in sesiones_mes if s.paciente.modalidad == "particular")
+    # Desglose OS vs particular desde movimientos reales
+    ing_os = sum(m.monto for m in movs if m.tipo == "ingreso" and "Obra social" in m.categoria)
+    ing_part = sum(m.monto for m in movs if m.tipo == "ingreso" and "Particular" in m.categoria)
+    sesiones_mes = len([m for m in movs if m.tipo == "ingreso"])
 
     meses = sorted(set(
         m.fecha[:7] for m in Movimiento.query.all()
@@ -375,7 +375,7 @@ def consultorio():
         saldo=saldo,
         ing_os=ing_os,
         ing_part=ing_part,
-        sesiones_mes=len(sesiones_mes),
+        sesiones_mes=sesiones_mes,
         mes_seleccionado=mes_str,
         meses=meses,
         fmt_pesos=fmt_pesos
