@@ -68,6 +68,7 @@
 
 <div class="card">
     <h2>📋 Movimientos</h2>
+    {% if movimientos %}
         {% for m in movimientos %}
         <div class="mov-row">
             <div style="font-size:22px;">{{ '💰' if m.tipo == 'ingreso' else '🧾' }}</div>
