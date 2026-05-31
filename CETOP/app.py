@@ -75,11 +75,13 @@ class Sesion(db.Model):
 class Movimiento(db.Model):
     __tablename__ = "movimiento_cetop"
     id = db.Column(db.Integer, primary_key=True)
-    tipo = db.Column(db.String(20), nullable=False)  # ingreso / gasto
+    tipo = db.Column(db.String(20), nullable=False)  # ingreso / gasto / pendiente_os
     descripcion = db.Column(db.String(200), nullable=False)
     monto = db.Column(db.Float, nullable=False)
     fecha = db.Column(db.String(20), nullable=False)
     categoria = db.Column(db.String(100), default="General")
+    terapeuta_id = db.Column(db.Integer, db.ForeignKey("terapeuta.id"), nullable=True)
+    turno_id = db.Column(db.Integer, db.ForeignKey("turno.id"), nullable=True)
 
 
 # ── Helpers ──────────────────────────────────────────────
@@ -174,31 +176,75 @@ def cobrar_turno(id):
     t = Turno.query.get(id)
     if t and t.estado != "cobrado":
         if t.paciente.precio_sesion > 0:
-            modalidad = "Obra social" if t.paciente.modalidad == "obra_social" else "Particular"
-            # Ingreso por la sesión completa
-            m = Movimiento(
-                tipo="ingreso",
-                descripcion=f"Sesión — {t.paciente.nombre}",
-                monto=t.paciente.precio_sesion,
-                fecha=t.fecha,
-                categoria=f"Sesión cobrada · {modalidad}"
-            )
-            db.session.add(m)
-            # Si el terapeuta NO es admin (no es Andrés), generar gasto del 70%
             terapeuta = Terapeuta.query.get(t.terapeuta_id)
-            if terapeuta and not terapeuta.es_admin:
-                pago_colega = round(t.paciente.precio_sesion * 0.70, 2)
-                gasto = Movimiento(
-                    tipo="gasto",
-                    descripcion=f"Pago a colega — {terapeuta.nombre}",
-                    monto=pago_colega,
+            es_os = t.paciente.modalidad == "obra_social"
+
+            if es_os:
+                # Obra social → entra como pendiente, sin gasto todavía
+                m = Movimiento(
+                    tipo="pendiente_os",
+                    descripcion=f"Pendiente OS — {t.paciente.nombre}",
+                    monto=t.paciente.precio_sesion,
                     fecha=t.fecha,
-                    categoria="Pago a profesional"
+                    categoria="Obra social pendiente",
+                    terapeuta_id=t.terapeuta_id,
+                    turno_id=t.id
                 )
-                db.session.add(gasto)
+                db.session.add(m)
+            else:
+                # Particular → ingreso inmediato
+                m = Movimiento(
+                    tipo="ingreso",
+                    descripcion=f"Sesión — {t.paciente.nombre}",
+                    monto=t.paciente.precio_sesion,
+                    fecha=t.fecha,
+                    categoria="Sesión cobrada · Particular",
+                    terapeuta_id=t.terapeuta_id
+                )
+                db.session.add(m)
+                # Si es colega (no admin) → gasto 70% inmediato
+                if terapeuta and not terapeuta.es_admin:
+                    pago = round(t.paciente.precio_sesion * 0.70, 2)
+                    gasto = Movimiento(
+                        tipo="gasto",
+                        descripcion=f"Pago a colega — {terapeuta.nombre}",
+                        monto=pago,
+                        fecha=t.fecha,
+                        categoria="Pago a profesional",
+                        terapeuta_id=t.terapeuta_id
+                    )
+                    db.session.add(gasto)
+
         t.estado = "cobrado"
         db.session.commit()
     return redirect(url_for("turnos", fecha=t.fecha))
+
+
+@app.route("/consultorio/confirmar_os/<int:id>")
+@login_required
+def confirmar_os(id):
+    """Cuando la OS paga — convierte pendiente en ingreso real y genera gasto si es colega"""
+    m = Movimiento.query.get(id)
+    if m and m.tipo == "pendiente_os":
+        terapeuta = Terapeuta.query.get(m.terapeuta_id)
+        # Convertir a ingreso real
+        m.tipo = "ingreso"
+        m.descripcion = m.descripcion.replace("Pendiente OS — ", "Sesión — ")
+        m.categoria = "Sesión cobrada · Obra social"
+        # Si es colega → generar gasto 70% recién ahora
+        if terapeuta and not terapeuta.es_admin:
+            pago = round(m.monto * 0.70, 2)
+            gasto = Movimiento(
+                tipo="gasto",
+                descripcion=f"Pago a colega — {terapeuta.nombre}",
+                monto=pago,
+                fecha=date.today().strftime("%Y-%m-%d"),
+                categoria="Pago a profesional",
+                terapeuta_id=terapeuta.id
+            )
+            db.session.add(gasto)
+        db.session.commit()
+    return redirect("/consultorio")
 
 
 @app.route("/turnos/agregar", methods=["POST"])
@@ -367,18 +413,25 @@ def eliminar_sesion(id):
 @login_required
 def consultorio():
     mes_str = request.args.get("mes", date.today().strftime("%Y-%m"))
-    movs = Movimiento.query.filter(Movimiento.fecha.like(f"{mes_str}%")).order_by(Movimiento.fecha.desc()).all()
+    movs = Movimiento.query.filter(
+        Movimiento.fecha.like(f"{mes_str}%"),
+        Movimiento.tipo != "pendiente_os"
+    ).order_by(Movimiento.fecha.desc()).all()
+
     ingresos = sum(m.monto for m in movs if m.tipo == "ingreso")
     gastos = sum(m.monto for m in movs if m.tipo == "gasto")
     saldo = ingresos - gastos
 
-    # Desglose OS vs particular desde movimientos reales
     ing_os = sum(m.monto for m in movs if m.tipo == "ingreso" and "Obra social" in m.categoria)
     ing_part = sum(m.monto for m in movs if m.tipo == "ingreso" and "Particular" in m.categoria)
     sesiones_mes = len([m for m in movs if m.tipo == "ingreso"])
 
+    # Pendientes OS — todos sin filtro de mes para que Andrés los vea siempre
+    pendientes_os = Movimiento.query.filter_by(tipo="pendiente_os").order_by(Movimiento.fecha.desc()).all()
+    total_pendiente_os = sum(m.monto for m in pendientes_os)
+
     meses = sorted(set(
-        m.fecha[:7] for m in Movimiento.query.all()
+        m.fecha[:7] for m in Movimiento.query.filter(Movimiento.tipo != "pendiente_os").all()
     ), reverse=True)
 
     return render_template("consultorio.html",
@@ -389,6 +442,8 @@ def consultorio():
         ing_os=ing_os,
         ing_part=ing_part,
         sesiones_mes=sesiones_mes,
+        pendientes_os=pendientes_os,
+        total_pendiente_os=total_pendiente_os,
         mes_seleccionado=mes_str,
         meses=meses,
         fmt_pesos=fmt_pesos

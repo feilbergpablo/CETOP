@@ -40,9 +40,34 @@
     </div>
 </div>
 
+{% if pendientes_os %}
+<div class="card" style="border: 2px solid #2563eb;">
+    <h2>⏳ Pendientes de cobro — Obra Social</h2>
+    <div style="background:#dbeafe;border-radius:10px;padding:12px;margin-bottom:14px;text-align:center;">
+        <div style="font-size:22px;font-weight:bold;color:#1e40af;">${{ fmt_pesos(total_pendiente_os) }}</div>
+        <div style="font-size:13px;color:#1e40af;">Total pendiente de cobro por obras sociales</div>
+    </div>
+    {% for m in pendientes_os %}
+    <div class="mov-row">
+        <div style="font-size:22px;">⏳</div>
+        <div style="flex:1;">
+            <div style="font-size:14px;font-weight:bold;color:#1a1a2e;">{{ m.descripcion }}</div>
+            <div style="font-size:12px;color:#9ca3af;">{{ m.categoria }} · {{ m.fecha }}</div>
+        </div>
+        <div style="font-size:14px;font-weight:bold;color:#1e40af;">${{ fmt_pesos(m.monto) }}</div>
+        <a href="/consultorio/confirmar_os/{{ m.id }}" 
+           onclick="return confirm('¿Confirmar que la obra social pagó este monto?')"
+           class="btn btn-success btn-sm">✅ OS Pagó</a>
+        <a href="/consultorio/eliminar/{{ m.id }}" 
+           onclick="return confirm('¿Eliminar este pendiente?')"
+           class="btn btn-secondary btn-sm">🗑</a>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
 <div class="card">
     <h2>📋 Movimientos</h2>
-    {% if movimientos %}
         {% for m in movimientos %}
         <div class="mov-row">
             <div style="font-size:22px;">{{ '💰' if m.tipo == 'ingreso' else '🧾' }}</div>
