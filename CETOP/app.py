@@ -172,9 +172,10 @@ def turnos():
 @login_required
 def cobrar_turno(id):
     t = Turno.query.get(id)
-    if t and t.estado != "cobrado":  # solo si no fue cobrado ya
+    if t and t.estado != "cobrado":
         if t.paciente.precio_sesion > 0:
             modalidad = "Obra social" if t.paciente.modalidad == "obra_social" else "Particular"
+            # Ingreso por la sesión completa
             m = Movimiento(
                 tipo="ingreso",
                 descripcion=f"Sesión — {t.paciente.nombre}",
@@ -183,6 +184,18 @@ def cobrar_turno(id):
                 categoria=f"Sesión cobrada · {modalidad}"
             )
             db.session.add(m)
+            # Si el terapeuta NO es admin (no es Andrés), generar gasto del 70%
+            terapeuta = Terapeuta.query.get(t.terapeuta_id)
+            if terapeuta and not terapeuta.es_admin:
+                pago_colega = round(t.paciente.precio_sesion * 0.70, 2)
+                gasto = Movimiento(
+                    tipo="gasto",
+                    descripcion=f"Pago a colega — {terapeuta.nombre}",
+                    monto=pago_colega,
+                    fecha=t.fecha,
+                    categoria="Pago a profesional"
+                )
+                db.session.add(gasto)
         t.estado = "cobrado"
         db.session.commit()
     return redirect(url_for("turnos", fecha=t.fecha))
